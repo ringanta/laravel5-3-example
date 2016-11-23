@@ -169,8 +169,11 @@ task prepareDist (type : Copy, description: "Populate all files that will be dep
     "config.ini", "composer.phar", "build.gradle",
     ".phpstorm.meta.php", "_ide_helper.php", "readme.md",
     "phpmd.xml", "package.json", "gulpfile.js",
-    ".gitattributes", ".env", ".env.example",
-    "INSTALL.md", "README.md", "LICENSE.txt"
+    ".gitattributes", ".env",
+    "INSTALL.md", "README.md", "LICENSE.txt",
+    "gradle", "gradlew", "gradlew.bat", ".gradle-home",
+    "Dockerfile.build", "docker-compose.build.yml",
+    "build.sh", "?", ".composer"
     into artifactDir
 }
 

@@ -17,10 +17,10 @@
         "phpunit/phpunit": "~5.0",
         "symfony/css-selector": "3.1.*",
         "symfony/dom-crawler": "3.1.*",
-		"phpmd/phpmd": "2.4.3",
-        "phploc/phploc": "2.1.*",
-        "sebastian/phpcpd": "2.0.*",
-        "squizlabs/php_codesniffer": "2.*"
+		"phpmd/phpmd": "@stable",
+        "phploc/phploc": "@stable",
+        "sebastian/phpcpd": "@stable",
+        "squizlabs/php_codesniffer": "@stable"
     },
     "autoload": {
         "classmap": [
