@@ -18,6 +18,6 @@ node('aws') {
    }
    
    stage('Manual Validation') {
-      build job: 'Deployment Staging', parameters: [string(name: 'SOURCE_BUILD_NO', value: '$BUILD_NUMBER')], wait: false
+      build job: 'Deployment Staging', parameters: [string(name: 'SOURCE_BUILD_NO', value: "${env.BUILD_NUMBER}")], wait: false
    }
 }
