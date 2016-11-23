@@ -56,3 +56,8 @@ public/files/.tmb/*
 .gradle/
 .gradle-home/
 build/
+
+# Composer
+.composer/
+
+?/
