@@ -1,0 +1,187 @@
+buildscript {
+    repositories {
+        jcenter()
+        mavenCentral()
+		maven {
+		 	url "https://plugins.gradle.org/m2/"
+		}
+    }
+
+	dependencies {
+    	classpath "net.rdrei.android.buildtimetracker:gradle-plugin:0.5.+"
+  	}
+}
+
+plugins {
+    id "de.undercouch.download" version "3.1.2"
+}
+
+apply plugin: "build-time-tracker"
+
+import de.undercouch.gradle.tasks.download.Download
+import java.nio.file.Paths
+
+ext {
+    buildDir = 'build'
+    sourceDir = '.'
+    scaOutputDir = 'build/logs'
+    phpunitConfig = 'phpunit.xml'
+    artifactName = 'laravel5' // without extention since .zip will be added to final artifact
+}
+
+buildtimetracker {
+	reporters {
+		csv {
+			output "$projectDir/build/times.csv"
+			append false
+			header true
+		}
+
+		summary {
+			ordered false
+			threshold 50
+			barstyle "unicode"
+		}
+	}
+}
+
+task clean << {
+    delete 'build'
+}
+
+task makeDirectories << {
+    mkdir(buildDir)
+    mkdir(scaOutputDir)
+}
+
+task installComposer(type:Exec, dependsOn : makeDirectories, description : "Install composer"){
+    outputs.files file('composer.phar')
+
+    executable "php"
+    args "$buildDir/installer", "--disable-tls"
+
+    doFirst {
+        download {
+            src "https://getcomposer.org/installer"
+            dest "$buildDir" 
+            onlyIfNewer true
+        }
+    }
+}
+
+task composerInstall (type : Exec, dependsOn : installComposer, description : "Run composer install"){
+    executable "php"
+    args "composer.phar", "install"
+}
+
+task composerUpdate (type : Exec, dependsOn : installComposer, description : "Run composer update"){
+    executable "php"
+    args "composer.phar", "update"
+}
+
+task auditComposer (type: Exec, dependsOn: composerInstall, description: "Check composer.lock file against sensiolab api"){
+    executable "php"
+    args "security-checker.phar", "security:check", "composer.lock"
+
+    doFirst {
+        download {
+            src "http://get.sensiolabs.org/security-checker.phar"
+            dest "security-checker.phar"
+        }
+    }
+}
+
+FileTree tree = fileTree(dir: sourceDir)
+tree.include "**/*.php"
+tree.exclude ".phpstorm.meta.php", "_ide_helper.php", "vendor", "build"
+def executableExt = System.properties["os.name"].toLowerCase().contains("windows") ? ".bat" : ""
+def vendorBinDir = "./vendor/bin"
+def scaCmdTemplate = { cmd -> vendorBinDir + '/' + cmd + executableExt}
+def phpcsRuleset = "laravel5_ruleset.xml"
+
+task lint << {
+    tree.each { File file ->
+        exec {
+            commandLine "php", "-l", "$file"
+        }
+    }
+}
+
+task phploc(type : Exec, description : "Measure project size using PHPLOC"){
+    executable scaCmdTemplate(name)
+	args "--log-csv", "build/logs/phploc.csv", sourceDir, "--exclude=vendor,.phpstorm.meta.php,_ide_helper.php"
+}
+
+task pdepend(type : Exec, description : "Calculate software metrics using PHP_Depend"){
+    executable scaCmdTemplate(name)
+	args "--jdepend-chart=build/logs/pdepend.html", "--ignore=vendor,.phpstorm.meta.php,_ide_helper.php", sourceDir
+}
+
+task phpmd (type : Exec, description : "Perform project mess detection using PHPMD, and Creating a log file for the Continuous Integration Server"){
+    executable scaCmdTemplate(name)
+	args sourceDir, "xml", "phpmd.xml", "--reportfile", "build/logs/phpmd.xml",
+        "--suffixes", ".php", "--exclude", "vendor,.phpstorm.meta.php,_ide_helper.php"
+}
+
+task phpcpd (type : Exec, description : "Find Duplicate code using PHPCPD"){
+    executable scaCmdTemplate(name)
+	args "--log-pmd", "build/logs/phpcpd.xml", "--exclude", "vendor", sourceDir
+    ignoreExitValue = true
+} 
+
+task phpunit (type : Exec, description : "Run unit tests with PHPUnit"){
+    executable scaCmdTemplate(name)
+    args "-c", phpunitConfig, "--log-junit", "build/logs/phpunit.xml"
+}
+
+task phpunitCoverage (type : Exec, description : "Run unit tests with PHPUnit"){
+    executable scaCmdTemplate(name)
+	args "-c", phpunitConfig, "--coverage-clover", "build/logs/clover.xml",
+        "--coverage-crap4j", "build/logs/crap4j.xml", "--log-junit", "build/logs/phpunit.xml"
+}
+
+task phpcs (type : Exec, description : "Find Coding Standard Violations using PHP_CodeSniffer & Creating a log file for the Continuous Integration Server"){
+    executable scaCmdTemplate(name)
+	args "--report=checkstyle", "--report-file=build/logs/phpcs.xml" , sourceDir,
+        "--runtime-set", "ignore_errors_on_exit", "1", "--runtime-set",
+        "ignore_warnings_on_exit", "1", "--ignore=vendor,.phpstorm.meta.php,_ide_helper.php",
+        "--standard=${phpcsRuleset}"
+}
+
+task build (dependsOn : [composerInstall, lint, phploc, pdepend, phpcpd, phpmd, phpcs, phpunit])
+phploc.mustRunAfter composerInstall
+pdepend.mustRunAfter composerInstall
+phpmd.mustRunAfter composerInstall
+phpcpd.mustRunAfter composerInstall
+phpunit.mustRunAfter composerInstall
+phpcs.mustRunAfter composerInstall
+
+/* Packaging */
+def distDir = 'build/dist'
+def artifactDir = "$distDir/$artifactName"
+task prepareDist (type : Copy, description: "Populate all files that will be deployed into one folder"){
+    mkdir(artifactDir)
+    from "$projectDir"
+    exclude ".gradle", "cache", "build", "phpunit.xml",
+    "tests", "pkg_builder", "phpunit.xml.dist",
+    "cache.properties", ".gitignore", ".travis.yml",
+    "build.xml", "composer.json", "composer.lock",
+    "config.ini", "composer.phar", "build.gradle",
+    ".phpstorm.meta.php", "_ide_helper.php", "readme.md",
+    "phpmd.xml", "package.json", "gulpfile.js",
+    ".gitattributes", ".env", ".env.example",
+    "INSTALL.md", "README.md", "LICENSE.txt"
+    into artifactDir
+}
+
+task dist (type : Zip, dependsOn : prepareDist){
+    from artifactDir
+    destinationDir = file(distDir)
+    baseName = artifactName
+}
+
+if (tasks.findByPath('wrapper') == null) {
+    task wrapper (type: Wrapper) {
+        gradleVersion= '2.14.1'
+    }
+}
