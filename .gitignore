@@ -51,3 +51,8 @@ database/database.sqlite
 public/files/.quarantine/
 public/files/.tmb/*
 .env
+
+# Gradle
+.gradle/
+.gradle-home/
+build/
