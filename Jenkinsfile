@@ -1,6 +1,6 @@
 node('aws') {
    stage('Preparation') { 
-      checkout
+      checkout scm
    }
 
    stage('Commit') {
