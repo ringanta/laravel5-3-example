@@ -59,5 +59,6 @@ build/
 
 # Composer
 .composer/
+composer.phar
 
 ?/
