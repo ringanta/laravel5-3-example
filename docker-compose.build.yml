@@ -1,0 +1,10 @@
+gradle:
+    build: .
+    dockerfile: Dockerfile.build
+    command: ./gradlew build
+    volumes:
+        - .:$WORKDIR
+    working_dir: $WORKDIR
+    environment:
+        - GRADLE_USER_HOME=$WORKDIR/.gradle-home
+        - HOME=$WORKDIR
