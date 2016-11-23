@@ -15,6 +15,9 @@ node('aws') {
       step([$class: 'PmdPublisher', defaultEncoding: '', healthy: '', pattern: 'build/logs/pmd.xml', unHealthy: ''])
       step([$class: 'DryPublisher', defaultEncoding: '', healthy: '', highThreshold: 20, normalThreshold: 10, pattern: 'build/logs/pmd-cpd.xml', unHealthy: ''])
       step([$class: 'AnalysisPublisher', defaultEncoding: '', healthy: '', unHealthy: ''])
-
+   }
+   
+   stage('Manual Validation') {
+      build job: 'Deployment Staging', parameters: [string(name: 'SOURCE_BUILD_NO', value: '$BUILD_NUMBER')], wait: false
    }
 }
