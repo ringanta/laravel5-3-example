@@ -62,3 +62,4 @@ build/
 composer.phar
 
 ?/
+.pdepend/
