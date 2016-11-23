@@ -183,6 +183,10 @@ task dist (type : Zip, dependsOn : prepareDist){
     baseName = artifactName
 }
 
+task commit(dependsOn: [composerInstall, lint, dist])
+
+task acceptanceTests(dependsOn: [phploc, pdepend, phpcpd, phpcs])
+
 if (tasks.findByPath('wrapper') == null) {
     task wrapper (type: Wrapper) {
         gradleVersion= '2.14.1'
